@@ -1,3 +1,6 @@
 numpy
 scipy
 manifold3d
+# nur fuer tools/make_gravur.py:
+pillow
+contourpy

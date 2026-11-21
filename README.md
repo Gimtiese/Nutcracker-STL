@@ -34,6 +34,8 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 | `nutcracker.py` | Parametrischer Generator für alles oben |
 | `walnut_relief.npz` | Reliefkarte der Schale, aus dem 3D-Scan einer echten Walnuss |
 | `tools/scan_to_relief.py` | Erzeugt die Reliefkarte aus dem Scan (OBJ) |
+| `gravur.json` | Motiv der Gravur auf der Rückseite |
+| `tools/make_gravur.py` | Erzeugt die Gravur aus Bildvorlage, Text und Schrift |
 
 ## Druck (Bambu Lab A1, 0,4-mm-Düse)
 
@@ -80,6 +82,35 @@ Bambu Studio sie beim Laden verschiebt, Position auf die des Teils setzen.
   Slicer in X/Y auf 98–99 % skalieren (Z bei 100 % lassen).
 - Ein Tropfen Speiseöl am Gewinde macht das Drehen leichter.
 
+## Gravur auf der Rückseite
+
+![Gravur](docs/gravur.png)
+
+Auf der flachen Rückseite – der Seite, die auf dem Druckbett liegt – sind ein Bär,
+ein Tannenbaum und ein Schriftzug 0,6 mm tief graviert. Im Bild sind die Rillen
+dunkel hervorgehoben; im Druck haben sie die Farbe des Körpers. Gelesen wird von
+außen, die Schraube zeigt dabei nach rechts.
+
+Bär und Baum sind als Kontur graviert, nicht als Fläche. So ist jede Rille
+höchstens 1,3 mm breit, und die vierte Schicht überbrückt sie sauber. Eine
+flächige Vertiefung müsste dicht über dem heißen Bett weit überbrückt werden und
+würde unsauber.
+
+Für eine saubere Gravur das Bett vorher reinigen und die erste Schicht nicht zu
+schnell drucken.
+
+Das Motiv liegt in `gravur.json`. Mit anderem Text oder anderer Vorlage neu erzeugen:
+
+```bash
+pip install pillow contourpy
+python3 tools/make_gravur.py vorlage.jpg "Vorname & Vorname" /pfad/zur/Schrift.otf gravur.json
+python3 nutcracker.py
+```
+
+Die Vorlage ist ein Bild mit einer hellen, orangefarbenen Figur auf dunklem Grund;
+als Schrift ist Dosis ExtraBold verwendet. Ohne Gravur drucken: in `nutcracker.py`
+den Wert `engraving` auf `""` setzen.
+
 ## Benutzung
 
 Am stabilsten liegt der Nussknacker auf seinem flachen Rücken – die Kammer ist
@@ -120,9 +151,11 @@ Rechnerisch geprüft:
 - Mindestwand um das Gewinde 5,5 mm, um die Nusskammer mindestens 4 mm (am Rand
   5 mm, auf Achshöhe über 10 mm), Rückwand 6 mm
 - Außenhaut ohne Überhang über 45°; steilere Flächen gibt es nur an den
-  Gewindeflanken der Schraube (55°) und als Brücke im Gewindeloch
+  Gewindeflanken der Schraube (55°), als Brücke im Gewindeloch und über den
+  schmalen Rillen der Gravur
 - Test-Slice mit PrusaSlicer: Schraube ohne Stützmaterial, Körper nur im
-  Gewindeloch; die Modifier wirken an der vorgesehenen Stelle
+  Gewindeloch; die Modifier wirken an der vorgesehenen Stelle; die Gravur bleibt in den ersten
+  drei Schichten frei und wird darüber überbrückt
 
 Noch offen:
 

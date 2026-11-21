@@ -17,13 +17,14 @@ Aufruf:  python3 nutcracker.py [ausgabe-ordner]
 """
 from __future__ import annotations
 
+import json
 import sys
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-from manifold3d import CrossSection, JoinType, Manifold, Mesh
+from manifold3d import CrossSection, FillRule, JoinType, Manifold, Mesh
 
 
 # --------------------------------------------------------------------------
@@ -73,6 +74,10 @@ class Params:
     lump_amp: float = 0.9        # grobe Beulen
     seam_h: float = 1.4          # Hoehe der Naht
     seam_w: float = 3.0          # halbe Breite der Naht
+
+    # --- Gravur auf der Rueckseite ---------------------------------------
+    engraving: str = "gravur.json"   # Motiv fuer die Druckbett-Seite; "" = keine Gravur
+    engrave_depth: float = 0.6   # Tiefe der Gravur (3 Schichten bei 0,2 mm)
 
     # --- Gewinde ----------------------------------------------------------
     d_major: float = 22.0        # Aussendurchmesser Schraube
@@ -434,6 +439,18 @@ def revolve(profile: list[tuple[float, float]], seg: int = 96) -> Manifold:
 # --------------------------------------------------------------------------
 # Koerper
 # --------------------------------------------------------------------------
+def engraving(p: Params) -> Manifold | None:
+    """Gravur fuer die flache Rueckseite als Abzugskoerper (None, wenn keine Datei da ist).
+    Die Datei enthaelt Konturen in Koerper-xy; innen/aussen ergibt sich aus der
+    Gerade-Ungerade-Regel, Loecher in Buchstaben bleiben also stehen."""
+    path = Path(__file__).resolve().parent / p.engraving
+    if not p.engraving or not path.exists():
+        return None
+    polys = [np.array(q, dtype=float) for q in json.loads(path.read_text())["polygons_xy"]]
+    cs = CrossSection(polys, FillRule.EvenOdd)
+    return cs.extrude(p.engrave_depth + 1.0).translate((0.0, 0.0, -1.0))
+
+
 def make_body(p: Params) -> Manifold:
     body = walnut_outer(p)
     body = body.trim_by_plane((0.0, 0.0, 1.0), 0.0)            # Ruecken = Druckbett
@@ -465,6 +482,10 @@ def make_body(p: Params) -> Manifold:
     roof = roof.mirror((0.0, 0.0, 1.0)).translate((0.0, 0.0, 2 * p.z_axis))
 
     body = body - hole - cone - roof
+
+    gravur = engraving(p)
+    if gravur is not None:
+        body = body - gravur
 
     # Mulde im Amboss, haelt die Nuss mittig
     cup = Manifold.sphere(p.anvil_cup_r, 96).translate(
