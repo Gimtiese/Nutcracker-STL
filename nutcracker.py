@@ -50,7 +50,8 @@ class Params:
     exp_y_top: float = 2.4       # >2 macht das Ende stumpfer (Platz fuer das Gewinde)
     exp_y_bot: float = 2.2
     y_top: float = 40.0          # plane Flaeche, an der die Schraube eintritt
-    y_bot: float = -40.5         # kleine Standflaeche am runden Ende
+    stand_flat_y: float | None = None   # z. B. -40.5 kappt die Spitze zu einer Standflaeche
+    anvil_block: float = 14.0    # Tiefe des massiv gedruckten Blocks hinter dem Amboss
     boss_len: float = 20.0       # Laenge des Gewindeblocks
     boss_wall: float = 5.5       # Mindestwand um das Gewinde
     cav_wall: float = 6.5        # Wand um die Nusskammer, auf die das Relief aufgesetzt wird
@@ -437,7 +438,8 @@ def make_body(p: Params) -> Manifold:
     body = walnut_outer(p)
     body = body.trim_by_plane((0.0, 0.0, 1.0), 0.0)            # Ruecken = Druckbett
     body = body.trim_by_plane((0.0, -1.0, 0.0), -p.y_top)      # Schraubenseite
-    body = body.trim_by_plane((0.0, 1.0, 0.0), p.y_bot)        # Standflaeche
+    if p.stand_flat_y is not None:                             # sonst bleibt die Spitze der Nuss
+        body = body.trim_by_plane((0.0, 1.0, 0.0), p.stand_flat_y)
     body = body - scoop(p) - cavity(p)
 
     c = p.clearance
@@ -530,9 +532,9 @@ def screw_in_body(p: Params, screw: Manifold, gap: float, turn_deg: float = 0.0)
 def make_modifiers(p: Params) -> dict[str, Manifold]:
     boss = Manifold.cylinder(p.boss_len + 7.0, p.r_major + 9.0, p.r_major + 9.0, 64)
     boss = along_y(boss).translate((0.0, p.y_boss - 5.0, p.z_axis))
-    anvil_len = p.y_anvil - p.y_bot + 4.0
+    anvil_len = p.anvil_block + 3.0
     anvil = Manifold.cylinder(anvil_len, 17.0, 17.0, 64)
-    anvil = along_y(anvil).translate((0.0, p.y_bot - 1.0, p.z_axis))
+    anvil = along_y(anvil).translate((0.0, p.y_anvil - p.anvil_block, p.z_axis))
     shank = Manifold.cylinder(p.neck_h + p.thread_len + 5.0, p.r_major + 3.0, p.r_major + 3.0, 64)
     shank = shank.translate((0.0, 0.0, p.head_h - 4.0))
     return {"body_gewinde": boss, "body_amboss": anvil, "screw_schaft": shank}

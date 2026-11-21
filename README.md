@@ -28,7 +28,7 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 | Datei | Inhalt |
 |---|---|
 | `nussknacker_bambu_a1.3mf` | Bambu-Studio-Projekt: beide Teile fertig ausgerichtet, Infill-Modifier eingebaut |
-| `stl/nussknacker_koerper.stl` | Körper, liegt bereits auf dem Rücken (74,9 × 80,5 × 49,0 mm) |
+| `stl/nussknacker_koerper.stl` | Körper, liegt bereits auf dem Rücken (74,9 × 86,3 × 49,0 mm) |
 | `stl/nussknacker_schraube.stl` | Schraube, steht bereits auf dem Griff (88 × 28 × 74,8 mm) |
 | `stl/modifier_*.stl` | Die drei Modifier-Körper einzeln, falls das 3MF nicht passt |
 | `nutcracker.py` | Parametrischer Generator für alles oben |
@@ -51,7 +51,7 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 | Rand (Brim) | nicht nötig |
 | Material | PLA; PETG geht auch |
 
-Verbrauch laut Test-Slice: Körper rund 95 g, Schraube rund 39 g.
+Verbrauch laut Test-Slice: Körper rund 96 g, Schraube rund 39 g.
 
 ### Die Modifier (mehr Füllung an den kritischen Stellen)
 
@@ -84,8 +84,9 @@ Bambu Studio sie beim Laden verschiebt, Position auf die des Teils setzen.
 
 Am stabilsten liegt der Nussknacker auf seinem flachen Rücken – die Kammer ist
 dann eine Schale, in der die Schalenstücke bleiben. Nuss einlegen, Schraube im
-Uhrzeigersinn drehen, bis es knackt. Er lässt sich auch aufrecht halten; am
-runden Ende ist eine kleine Standfläche.
+Uhrzeigersinn drehen, bis es knackt. Aufrecht steht er nicht von selbst: Am
+runden Ende sitzt die Spitze der Nuss. Wer eine Standfläche möchte, setzt in
+`nutcracker.py` den Wert `stand_flat_y` (zum Beispiel `-40.5`).
 
 - Öffnung: 47 mm breit, bis 47 mm zwischen Amboss und Schraube (Walnüsse bis etwa 44 mm)
 - kleinste Öffnung: rund 8 mm (Haselnüsse)
