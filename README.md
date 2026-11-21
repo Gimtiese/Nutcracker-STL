@@ -28,10 +28,12 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 | Datei | Inhalt |
 |---|---|
 | `nussknacker_bambu_a1.3mf` | Bambu-Studio-Projekt: beide Teile fertig ausgerichtet, Infill-Modifier eingebaut |
-| `stl/nussknacker_koerper.stl` | Körper, liegt bereits auf dem Rücken (72,8 × 78,8 × 48,4 mm) |
+| `stl/nussknacker_koerper.stl` | Körper, liegt bereits auf dem Rücken (74,9 × 80,5 × 49,0 mm) |
 | `stl/nussknacker_schraube.stl` | Schraube, steht bereits auf dem Griff (88 × 28 × 74,8 mm) |
 | `stl/modifier_*.stl` | Die drei Modifier-Körper einzeln, falls das 3MF nicht passt |
 | `nutcracker.py` | Parametrischer Generator für alles oben |
+| `walnut_relief.npz` | Reliefkarte der Schale, aus dem 3D-Scan einer echten Walnuss |
+| `tools/scan_to_relief.py` | Erzeugt die Reliefkarte aus dem Scan (OBJ) |
 
 ## Druck (Bambu Lab A1, 0,4-mm-Düse)
 
@@ -49,7 +51,7 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 | Rand (Brim) | nicht nötig |
 | Material | PLA; PETG geht auch |
 
-Verbrauch laut Test-Slice: Körper rund 87 g, Schraube rund 39 g.
+Verbrauch laut Test-Slice: Körper rund 95 g, Schraube rund 39 g.
 
 ### Die Modifier (mehr Füllung an den kritischen Stellen)
 
@@ -97,8 +99,16 @@ python3 nutcracker.py          # schreibt stl/ und nussknacker_bambu_a1.3mf
 ```
 
 Alle Maße stehen oben in `nutcracker.py` in der Klasse `Params` – zum Beispiel
-`cav_w`/`cav_len` (Kammer), `clearance` (Gewindespiel), `pit_depth` (Tiefe des
-Schalenreliefs) oder `seed` (anderes Schalenmuster).
+`cav_w`/`cav_len` (Kammer), `clearance` (Gewindespiel) oder `relief_gain`
+(wie kräftig das Schalenrelief ausfällt; 1 = wie gescannt, voreingestellt 1,25).
+
+Die Schale kommt aus `walnut_relief.npz`. Eine andere Nuss lässt sich so einlesen:
+
+```bash
+python3 tools/scan_to_relief.py walnut.obj walnut_relief.npz
+```
+
+Fehlt die Karte, rechnet der Generator ersatzweise ein künstliches Relief.
 
 ## Stand der Prüfung
 
@@ -106,7 +116,8 @@ Rechnerisch geprüft:
 
 - Netze geschlossen, je ein zusammenhängender Körper
 - Schraube läuft kollisionsfrei über den ganzen Verfahrweg (0,76 mm Axialspiel)
-- Mindestwand um das Gewinde 5,6 mm, Seitenwände 6,5–12,9 mm, Rückwand 6 mm
+- Mindestwand um das Gewinde 5,5 mm, um die Nusskammer mindestens 4 mm (am Rand
+  5 mm, auf Achshöhe über 10 mm), Rückwand 6 mm
 - Außenhaut ohne Überhang über 45°; steilere Flächen gibt es nur an den
   Gewindeflanken der Schraube (55°) und als Brücke im Gewindeloch
 - Test-Slice mit PrusaSlicer: Schraube ohne Stützmaterial, Körper nur im
@@ -118,9 +129,16 @@ Noch offen:
 - Das 3MF wurde nicht in Bambu Studio selbst geöffnet (nur als 3MF-Geometrie
   gegengelesen). Falls Bambu Studio die Modifier nicht übernimmt, die STL-Dateien nehmen.
 
-## Herkunft
+## Herkunft und Lizenz
 
-Eigene Neukonstruktion. Die Idee – Walnussform mit Schraube von oben – stammt vom
+Die Konstruktion ist neu. Die Idee – Walnussform mit Schraube von oben – stammt vom
 [Walnut-shaped Nutcracker](https://www.printables.com/model/1491974-walnut-shaped-nutcracker)
-von buchnema auf Printables. Geometrie von dort wurde nicht übernommen; das
-Schalenrelief ist prozedural erzeugt, kein 3D-Scan.
+von buchnema auf Printables; Geometrie von dort wurde nicht übernommen.
+
+Die Schalenoberfläche (Naht, Rippen, Furchen) stammt aus dem
+[Walnut 3D scan](https://www.printables.com/model/214774-walnut-3d-scan) von **DocMike**,
+lizenziert unter [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Der Scan wurde ausgerichtet, vergrößert und als Relief auf die Form des Nussknackers
+gelegt. Damit stehen `walnut_relief.npz`, die STL-Dateien und das 3MF ebenfalls unter
+CC BY-NC-SA 4.0: Weitergabe nur mit Nennung von DocMike, nicht kommerziell und unter
+derselben Lizenz.

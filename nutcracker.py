@@ -44,17 +44,26 @@ class Params:
     # --- Walnuss-Huelle ---------------------------------------------------
     ax: float = 35.0             # halbe Breite
     ay_top: float = 47.0         # Halbachse zur Schraubenseite (wird bei y_top gekappt)
-    ay_bot: float = 41.0         # Halbachse zum runden Ende hin
+    ay_bot: float = 42.0         # Halbachse zum runden Ende hin
     az_front: float = 28.0       # Halbachse oberhalb der Schraubenachse
     az_back: float = 32.0        # Halbachse unterhalb der Schraubenachse
-    exp_y: float = 2.4           # >2 macht die Enden stumpfer
+    exp_y_top: float = 2.4       # >2 macht das Ende stumpfer (Platz fuer das Gewinde)
+    exp_y_bot: float = 2.2
     y_top: float = 40.0          # plane Flaeche, an der die Schraube eintritt
-    y_bot: float = -38.8         # kleine Standflaeche am runden Ende
+    y_bot: float = -40.5         # kleine Standflaeche am runden Ende
     boss_len: float = 20.0       # Laenge des Gewindeblocks
     boss_wall: float = 5.5       # Mindestwand um das Gewinde
+    cav_wall: float = 6.5        # Wand um die Nusskammer, auf die das Relief aufgesetzt wird
+    cav_wall_min: float = 4.0    # harte Untergrenze dieser Wand, auch in tiefen Furchen
     max_overhang_deg: float = 43.0   # steilster Ueberhang der Aussenhaut
 
     # --- Walnuss-Oberflaeche ---------------------------------------------
+    relief_map: str = "walnut_relief.npz"   # Karte aus dem 3D-Scan; fehlt sie, wird gerechnet
+    relief_gain: float = 1.25    # 1 = Relief wie gescannt (mit der Nuss vergroessert)
+    relief_flip: bool = False    # andere Schalenhaelfte nach vorn
+    relief_tip_down: bool = True # Spitze der Nuss am runden Ende, Stielansatz an der Schraube
+    underside_fade: float = 0.45 # Rest-Relief auf der Unterseite (Druckbarkeit)
+    # nur fuer das gerechnete Ersatz-Relief:
     seed: int = 7
     n_cells: int = 84            # Anzahl der Felder zwischen den Rippen
     pit_depth: float = 2.4       # Tiefe der Felder zwischen den Rippen
@@ -63,7 +72,6 @@ class Params:
     lump_amp: float = 0.9        # grobe Beulen
     seam_h: float = 1.4          # Hoehe der Naht
     seam_w: float = 3.0          # halbe Breite der Naht
-    underside_fade: float = 0.45 # Rest-Relief auf der Unterseite (Druckbarkeit)
 
     # --- Gewinde ----------------------------------------------------------
     d_major: float = 22.0        # Aussendurchmesser Schraube
@@ -228,6 +236,54 @@ def walnut_relief(p: Params, d: np.ndarray) -> np.ndarray:
     return pits + wrinkles + lumps
 
 
+def scan_relief(p: Params, lat: np.ndarray, lon: np.ndarray) -> np.ndarray | None:
+    """Relief aus dem 3D-Scan als Faktor auf den Radius (1 = glattes Ellipsoid).
+    Die Karte liegt im selben Kugelraster wie die Aussenhaut: Pol = Nahtnormale,
+    Laenge 90 Grad = Spitze der Nuss.  Gibt None zurueck, wenn die Karte fehlt."""
+    from scipy.ndimage import gaussian_filter
+
+    path = Path(__file__).resolve().parent / p.relief_map
+    if not p.relief_map or not path.exists():
+        return None
+    rel = np.load(path)["relief"].astype(np.float64)
+    n_la, n_lo = rel.shape
+    if p.relief_flip:                                   # halbe Drehung um die Nussachse
+        rel = rel[::-1, ::-1]
+        rel = np.roll(rel, n_lo // 2 + 1, axis=1)
+    if p.relief_tip_down:                               # halbe Drehung um die Nahtnormale
+        rel = np.roll(rel, n_lo // 2, axis=1)
+    # leicht glaetten, damit das groebere Netz der Aussenhaut nicht flimmert
+    sig = 0.4 * (np.pi / p.n_lat) / (np.pi / n_la)
+    rel = gaussian_filter(rel, sigma=sig, mode=("nearest", "wrap"))
+    fi = np.clip((lat + np.pi / 2) / np.pi * n_la - 0.5, 0, n_la - 1)
+    fj = (lon / (2 * np.pi) * n_lo) % n_lo
+    i0 = np.floor(fi).astype(int)
+    i1 = np.minimum(i0 + 1, n_la - 1)
+    j0 = np.floor(fj).astype(int) % n_lo
+    j1 = (j0 + 1) % n_lo
+    ti, tj = fi - i0, fj - np.floor(fj)
+    return ((1 - ti) * (1 - tj) * rel[i0, j0] + (1 - ti) * tj * rel[i0, j1]
+            + ti * (1 - tj) * rel[i1, j0] + ti * tj * rel[i1, j1])
+
+
+def cavity_guard(p: Params, d: np.ndarray, wall: float) -> np.ndarray:
+    """Radius (ab Nussmitte) einer Huelle, die die Nusskammer mit der Wandstaerke
+    `wall` umschliesst.  Die Aussenhaut darf nirgends darunter liegen."""
+    cx, cy, cz, e = 0.5 * p.cav_w + wall, 0.5 * p.cav_len + wall, p.cav_depth + wall, p.cav_exp
+    lo = np.zeros(d.shape[:-1])
+    hi = np.full_like(lo, 90.0)
+    for _ in range(40):
+        mid = 0.5 * (lo + hi)
+        x, y, z = mid * d[..., 0], mid * d[..., 1], mid * d[..., 2]
+        q = np.abs(x / cx) ** e + np.abs((y - p.y_cav) / cy) ** e
+        above = (q < 1) & (z + p.z_axis < scoop_z(p, y) + 1.0)    # bis knapp ueber den Rand
+        below = q + np.abs(z / cz) ** e < 1
+        inside = np.where(z >= 0, above, below)
+        lo = np.where(inside, mid, lo)
+        hi = np.where(inside, hi, mid)
+    return lo
+
+
 def walnut_outer(p: Params) -> Manifold:
     """Aussenhaut als radial verschobene Kugel um (0, 0, z_axis)."""
     lat = np.linspace(-np.pi / 2, np.pi / 2, p.n_lat + 1)[1:-1]
@@ -240,26 +296,34 @@ def walnut_outer(p: Params) -> Manifold:
     # Schraubenseite/rundes Ende haben jeweils eigene Halbachsen
     az = np.where(dz >= 0, p.az_front, p.az_back)
     ay = np.where(dy >= 0, p.ay_top, p.ay_bot)
+    ey = np.where(dy >= 0, p.exp_y_top, p.exp_y_bot)
     q = (dx / p.ax) ** 2 + (dz / az) ** 2
     lo = np.zeros_like(q)
     hi = np.minimum(1.0 / np.sqrt(np.maximum(q, 1e-12)), ay / np.maximum(np.abs(dy), 1e-9))
     for _ in range(48):
         mid = 0.5 * (lo + hi)
-        inside = np.abs(mid * dy / ay) ** p.exp_y + mid * mid * q < 1.0
+        inside = np.abs(mid * dy / ay) ** ey + mid * mid * q < 1.0
         lo = np.where(inside, mid, lo)
         hi = np.where(inside, hi, mid)
     R = 0.5 * (lo + hi)
+    R = smooth_max(R, cavity_guard(p, d, p.cav_wall), 2.0)   # Platz fuer die Kammerwand
 
     # Relief; auf der Unterseite abgeschwaecht, damit dort nichts frei haengt
     under = np.clip((-np.degrees(LAT) - 8.0) / 30.0, 0.0, 1.0)
     under = under * under * (3 - 2 * under)
-    relief = walnut_relief(p, d) * (1 - (1 - p.underside_fade) * under)
+    fade = 1 - (1 - p.underside_fade) * under
+    scan = scan_relief(p, LAT, LON)
+    if scan is not None:
+        # echte Schale: Naht, Rippen und Furchen kommen aus dem 3D-Scan
+        R = R * (1 + p.relief_gain * (scan - 1) * fade)
+    else:
+        # Ersatz ohne Scan: gerechnetes Relief und ein glatter Wulst als Naht
+        seam_dist = R * np.arcsin(np.clip(dz, -1, 1))
+        seam = np.exp(-(seam_dist / p.seam_w) ** 2)
+        calm = np.exp(-(seam_dist / (1.5 * p.seam_w)) ** 2)
+        R = R + walnut_relief(p, d) * fade * (1 - calm) + p.seam_h * seam
 
-    # Naht in der Ebene z = z_axis: glatter Wulst, das Relief laeuft dort aus
-    seam_dist = R * np.arcsin(np.clip(dz, -1, 1))
-    seam = np.exp(-(seam_dist / p.seam_w) ** 2)
-    calm = np.exp(-(seam_dist / (1.5 * p.seam_w)) ** 2)
-    R = R + relief * (1 - calm) + p.seam_h * seam
+    R = smooth_max(R, cavity_guard(p, d, p.cav_wall_min), 0.6)
 
     # Gewindeblock: garantierte Mindestwand um das Gewinde (Zylinder um die y-Achse)
     r_boss = p.r_major + p.clearance + p.boss_wall
