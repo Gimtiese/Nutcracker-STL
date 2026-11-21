@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Erzeugt gravur.json: die Gravur auf der flachen Rueckseite (Druckbett-Seite).
 
-Motiv: ein Baer (aus einer Bilddatei nachgezeichnet), ein Tannenbaum mit Stern
+Motiv: ein Baer (aus einer Bilddatei nachgezeichnet), ein Tannenbaum
 und ein Schriftzug.  Baer und Baum werden als Kontur graviert, die Schrift als
 gefuellte Buchstaben -- alle Rillen bleiben damit schmal genug, dass die erste
 Schicht darueber sauber druckt.
@@ -26,6 +26,7 @@ import nutcracker as nc  # noqa: E402
 LINE = 1.3          # Rillenbreite der Konturen (mm)
 STROKE_MIN = 1.15   # kleinste Strichstaerke der Schrift (mm)
 MARGIN = 2.6        # Abstand der Gravur zum Rand der Auflageflaeche (mm)
+SCALE_MAX = 0.98    # groesster Massstab des Motivs (1 = Baer 36 mm breit); kleiner, falls es nicht passt
 SEG = 48
 
 
@@ -70,10 +71,8 @@ def text_shape(text: str, font_path: str, cap: float) -> CrossSection:
     return cs.translate((-b[0], -b[1]))
 
 
-def tree_shape(height: float, width: float) -> tuple[CrossSection, CrossSection]:
-    """Tanne (Umriss) und Stern; Ursprung unten Mitte des Stamms."""
-    star_r = 0.105 * height
-    h = height - 1.55 * star_r                 # Hoehe bis zur Baumspitze
+def tree_shape(h: float, width: float) -> CrossSection:
+    """Tanne (Umriss) der Hoehe h; Ursprung unten Mitte des Stamms."""
     trunk = 0.13
     right = [(0.0, 1.0), (0.44, 0.63), (0.21, 0.63), (0.70, 0.36), (0.38, 0.36),
              (1.0, trunk), (0.17, trunk), (0.17, 0.0)]
@@ -81,10 +80,7 @@ def tree_shape(height: float, width: float) -> tuple[CrossSection, CrossSection]
                     [(-x * width / 2, y * h) for x, y in right[:0:-1]])
     tree = CrossSection([poly], FillRule.EvenOdd)
     tree = tree.offset(-0.5, JoinType.Round, 2.0, SEG).offset(0.5, JoinType.Round, 2.0, SEG)   # Ecken runden
-    ang = np.pi / 2 + np.arange(10) * np.pi / 5
-    rad = np.where(np.arange(10) % 2 == 0, star_r, 0.45 * star_r)
-    star = CrossSection([np.c_[rad * np.cos(ang), rad * np.sin(ang) + h + 0.55 * star_r]], FillRule.EvenOdd)
-    return tree, star
+    return tree
 
 
 def outline(shape: CrossSection, w: float = LINE) -> CrossSection:
@@ -95,7 +91,7 @@ def compose(bear_img: str, text: str, font: str, s: float) -> tuple[CrossSection
     """Motiv in Betrachter-Koordinaten (a nach rechts, b nach oben) im Massstab s.
     Gibt (Gravurflaeche, Huellflaeche fuer die Platzpruefung) zurueck."""
     bear = bear_shape(bear_img, 36.0 * s)
-    tree, star = tree_shape(25.0 * s, 16.0 * s)
+    tree = tree_shape(20.9 * s, 16.0 * s)
     txt = text_shape(text, font, 6.2 * s)
     ground = 0.0
     bb = bear.bounds()
@@ -104,8 +100,8 @@ def compose(bear_img: str, text: str, font: str, s: float) -> tuple[CrossSection
     txt = txt.translate((0.5 * (bb[0] + tree_x + 8.0 * s) - 0.5 * (tb[2] - tb[0]) + 1.0 * s,
                          ground - 3.2 * s - (tb[3] - tb[1])))
     move = (tree_x, ground)
-    art = outline(bear) + outline(tree.translate(move)) + star.translate(move) + txt
-    hull = bear + tree.translate(move) + star.translate(move) + txt
+    art = outline(bear) + outline(tree.translate(move)) + txt
+    hull = bear + tree.translate(move) + txt
     return art, hull
 
 
@@ -118,14 +114,16 @@ def main() -> None:
     area = swap(foot).offset(-MARGIN, JoinType.Round, 2.0, SEG)
 
     best = None
-    for s in np.arange(1.12, 0.6, -0.02):
+    for s in np.arange(SCALE_MAX, 0.6, -0.02):
         art, hull = compose(bear_img, text, font, s)
         hb = hull.bounds()
         ab = area.bounds()
         for da in np.arange(ab[0] - hb[0], ab[2] - hb[2] + 1e-9, 0.5):
             for db in np.arange(ab[1] - hb[1], ab[3] - hb[3] + 1e-9, 0.5):
                 if (hull.translate((da, db)) - area).area() < 1e-3:
-                    cand = (abs(db + 0.5 * (hb[1] + hb[3])), da, db)      # moeglichst mittig
+                    # moeglichst mittig auf der Auflageflaeche
+                    cand = ((da + 0.5 * (hb[0] + hb[2]) - 0.5 * (ab[0] + ab[2])) ** 2
+                            + (db + 0.5 * (hb[1] + hb[3]) - 0.5 * (ab[1] + ab[3])) ** 2)
                     if best is None or cand < best[0]:
                         best = (cand, s, da, db)
         if best is not None:
