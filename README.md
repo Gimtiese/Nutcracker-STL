@@ -36,6 +36,7 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 | `tools/scan_to_relief.py` | Erzeugt die Reliefkarte aus dem Scan (OBJ) |
 | `gravur.json` | Motiv der Gravur auf der Rückseite |
 | `tools/make_gravur.py` | Erzeugt die Gravur aus Bildvorlage, Text und Schrift |
+| `tools/festigkeit.py` | Festigkeitsabschätzung (FEM für den Körper, Handrechnung für die Schraube) |
 
 ## Druck (Bambu Lab A1, 0,4-mm-Düse)
 
@@ -45,31 +46,77 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 |---|---|
 | Ausrichtung | wie geliefert – nicht drehen |
 | Schichthöhe | 0,20 mm |
-| Wandlinien | 5 |
+| Wandlinien | Körper 5, Schraube 4 |
 | Deck-/Bodenschichten | 5 / 5 |
-| Füllung | 25 % Gyroid (Schraube 30 %) |
+| Füllung | 25 % Gyroid |
 | Modifier | 100 %, Muster „Geradlinig“ |
 | Stützen | **aus** |
 | Rand (Brim) | nicht nötig |
 | Material | PLA; PETG geht auch |
 
-Verbrauch laut Test-Slice: Körper rund 96 g, Schraube rund 39 g.
+Verbrauch laut Test-Slice: Körper rund 88 g, Schraube rund 40 g.
 
-### Die Modifier (mehr Füllung an den kritischen Stellen)
+### Die Modifier (massive Zonen)
 
 ![Modifier](docs/modifier.png)
 
-Drei Bereiche werden massiv gedruckt:
+Drei Bereiche werden massiv gedruckt, alles andere mit 25 %:
 
-- **Gewindeblock** – Ring um das Innengewinde, dort wird die ganze Kraft eingeleitet
-- **Amboss** – Block hinter der Mulde, auf die die Nuss drückt
-- **Schaft** der Schraube
+- **Gewindehülse** – 5 mm stark um das Innengewinde. Sie stützt die Gewindezähne
+  und verteilt ihre Last; der Block dahinter ist kaum belastet und braucht keine
+  100 %.
+- **Ambossblock** – 30 mm Durchmesser, 12 mm tief hinter der Mulde. Hier drückt
+  die Nuss punktförmig, und das Ambossende ist die am höchsten belastete Zone.
+- **Schaft der Schraube** – von der Spitze bis 8 mm in den Griff hinein. Beim
+  Drehen entsteht Schub zwischen den Lagen; massiv ist er halb so groß wie mit
+  Wänden und 25 % Füllung.
 
 Im 3MF sind sie schon eingetragen. Mit den einzelnen STL geht es so:
 Körper laden → Rechtsklick → *Modifizierer hinzufügen* → *Laden…* → Modifier-STL
 wählen → für den Modifier *Fülldichte 100 %* und Muster *Geradlinig* setzen.
 Die Modifier-STL liegen im selben Koordinatensystem wie das jeweilige Teil; falls
 Bambu Studio sie beim Laden verschiebt, Position auf die des Teils setzen.
+
+## Festigkeit
+
+![Auslastung](docs/auslastung.png)
+
+Gerechnet ist mit `tools/festigkeit.py`: der Körper als Voxel-FEM (Wände und
+Deckschichten massiv, Füllung als weicheres Ersatzmaterial), die Schraube von Hand.
+
+**Lasten (Annahmen).** Eine Walnuss bricht meist bei 300–600 N, harte Nüsse
+brauchen bis etwa 1000 N. Dafür muss man mit 5 Nm drehen. Ein sehr kräftiger Griff schafft etwa
+10 Nm – das sind rund 2000 N bei trockenem und 2900 N bei geöltem Gewinde.
+
+**Körper bei 1000 N** (99,5-%-Werte in MPa; Festigkeit in der Lagenebene rund
+40 MPa, zwischen den Lagen rund 20 MPa):
+
+| | vorher | **jetzt** | sparsam | zu knapp |
+|---|---|---|---|---|
+| Wände / Füllung | 5 / 25 % | **5 / 25 %** | 4 / 25 % | 3 / 30 % |
+| massive Zonen | große Blöcke | **Hülse + Block** | Hülse + Block | Hülse + Block |
+| Seitenwände | 10,8 | **11,0** | 12,5 | 14,7 |
+| Ambossende | 8,3 | **8,8** | 10,2 | 11,0 |
+| Gewindeblock | 7,3 | **8,9** | 9,2 | 8,4 |
+| Zug zwischen den Lagen | 2,9 | **3,4** | 3,6 | 3,7 |
+| Schub zwischen den Lagen | 2,9 | **3,2** | 3,6 | 3,8 |
+| Füllung, Auslastung | 29 % | **32 %** | 36 % | 31 % |
+| Gewicht (Test-Slice) | 96 g | **88 g** | 83 g | 83 g |
+
+Am höchsten belastet sind die Seitenwände am Kammerrand und das Ambossende, nicht
+das Gewinde. Die Last tragen die Wandlinien: Die fünfte Wand kostet 4,5 g und
+senkt die Spannung an der schwächsten Stelle um 12 %. Mit 4 Wänden hält der Körper
+rechnerisch auch (3,2-fache statt 3,6-fache Sicherheit bei 1000 N), mit 3 Wänden
+käme er bei 2900 N an die Festigkeitsgrenze.
+
+**Schraube.** Der Schaft ist das am knappsten ausgelegte Teil: Bei 10 Nm entstehen
+massiv 9 MPa Schub zwischen den Lagen, mit 4 Wänden und 25 % Füllung wären es
+15 MPa. Der Griff ist unkritisch (Nabe 5,6 MPa bei 10 Nm), dort reichen 4 Wände
+und 25 %.
+
+Das sind Abschätzungen. Materialkennwerte und vor allem die Tragfähigkeit der
+Füllung sind grobe Annahmen, die Druckqualität streut, und Kerben feiner als 1 mm
+erfasst das Modell nicht.
 
 ### Hinweise
 
@@ -153,6 +200,8 @@ Rechnerisch geprüft:
 - Außenhaut ohne Überhang über 45°; steilere Flächen gibt es nur an den
   Gewindeflanken der Schraube (55°), als Brücke im Gewindeloch und über den
   schmalen Rillen der Gravur
+- Festigkeit gerechnet (siehe oben): bei 1000 N höchstens 11 MPa in den Wänden
+  und 3,4 MPa zwischen den Lagen
 - Test-Slice mit PrusaSlicer: Schraube ohne Stützmaterial, Körper nur im
   Gewindeloch; die Modifier wirken an der vorgesehenen Stelle; die Gravur bleibt in den ersten
   drei Schichten frei und wird darüber überbrückt

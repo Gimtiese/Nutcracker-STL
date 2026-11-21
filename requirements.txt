@@ -4,3 +4,5 @@ manifold3d
 # nur fuer tools/make_gravur.py:
 pillow
 contourpy
+# nur fuer tools/festigkeit.py:
+pyamg

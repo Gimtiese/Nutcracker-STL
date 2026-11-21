@@ -52,7 +52,11 @@ class Params:
     exp_y_bot: float = 2.2
     y_top: float = 40.0          # plane Flaeche, an der die Schraube eintritt
     stand_flat_y: float | None = None   # z. B. -40.5 kappt die Spitze zu einer Standflaeche
-    anvil_block: float = 14.0    # Tiefe des massiv gedruckten Blocks hinter dem Amboss
+    # --- massiv gedruckte Zonen (Modifier mit 100 % Fuellung) -------------
+    sleeve_wall: float = 5.0     # Huelse um das Gewinde: so weit ueber den Gewinde-Aussenradius hinaus
+    anvil_r: float = 15.0        # Radius des Blocks hinter der Ambossmulde
+    anvil_block: float = 12.0    # ... und seine Tiefe
+    shank_into_head: float = 8.0 # so tief reicht der massive Schaft in den Griff
     boss_len: float = 20.0       # Laenge des Gewindeblocks
     boss_wall: float = 5.5       # Mindestwand um das Gewinde
     cav_wall: float = 6.5        # Wand um die Nusskammer, auf die das Relief aufgesetzt wird
@@ -551,13 +555,13 @@ def screw_in_body(p: Params, screw: Manifold, gap: float, turn_deg: float = 0.0)
 # Modifier (Bereiche fuer 100 % Infill)
 # --------------------------------------------------------------------------
 def make_modifiers(p: Params) -> dict[str, Manifold]:
-    boss = Manifold.cylinder(p.boss_len + 7.0, p.r_major + 9.0, p.r_major + 9.0, 64)
-    boss = along_y(boss).translate((0.0, p.y_boss - 5.0, p.z_axis))
-    anvil_len = p.anvil_block + 3.0
-    anvil = Manifold.cylinder(anvil_len, 17.0, 17.0, 64)
+    r_sleeve = p.r_major + p.clearance + p.sleeve_wall
+    boss = Manifold.cylinder(p.boss_len + 3.0, r_sleeve, r_sleeve, 64)
+    boss = along_y(boss).translate((0.0, p.y_boss - 1.0, p.z_axis))
+    anvil = Manifold.cylinder(p.anvil_block + 3.0, p.anvil_r, p.anvil_r, 64)
     anvil = along_y(anvil).translate((0.0, p.y_anvil - p.anvil_block, p.z_axis))
-    shank = Manifold.cylinder(p.neck_h + p.thread_len + 5.0, p.r_major + 3.0, p.r_major + 3.0, 64)
-    shank = shank.translate((0.0, 0.0, p.head_h - 4.0))
+    shank = Manifold.cylinder(p.shank_into_head + p.neck_h + p.thread_len + 1.0, p.r_major + 3.0, p.r_major + 3.0, 64)
+    shank = shank.translate((0.0, 0.0, p.head_h - p.shank_into_head))
     return {"body_gewinde": boss, "body_amboss": anvil, "screw_schaft": shank}
 
 
@@ -594,8 +598,8 @@ def write_stl(path: Path, m: Manifold) -> None:
 BODY_SETTINGS = {"wall_loops": "5", "top_shell_layers": "5", "bottom_shell_layers": "5",
                  "sparse_infill_density": "25%", "sparse_infill_pattern": "gyroid",
                  "enable_support": "0"}
-SCREW_SETTINGS = {"wall_loops": "5", "top_shell_layers": "5", "bottom_shell_layers": "5",
-                  "sparse_infill_density": "30%", "sparse_infill_pattern": "gyroid",
+SCREW_SETTINGS = {"wall_loops": "4", "top_shell_layers": "5", "bottom_shell_layers": "5",
+                  "sparse_infill_density": "25%", "sparse_infill_pattern": "gyroid",
                   "enable_support": "0"}
 SOLID = {"sparse_infill_density": "100%", "sparse_infill_pattern": "zig-zag"}
 
@@ -687,8 +691,8 @@ def plate_objects(parts: dict[str, Manifold]) -> list[dict]:
     return [
         {"name": "Koerper (liegt auf dem Ruecken)", "pos": (84.0, 128.0), "settings": BODY_SETTINGS,
          "parts": [{"name": "Koerper", "mesh": parts["body"]},
-                   {"name": "Gewindeblock 100%", "mesh": parts["body_gewinde"], "modifier": True, "settings": SOLID},
-                   {"name": "Amboss 100%", "mesh": parts["body_amboss"], "modifier": True, "settings": SOLID}]},
+                   {"name": "Gewindehuelse 100%", "mesh": parts["body_gewinde"], "modifier": True, "settings": SOLID},
+                   {"name": "Ambossblock 100%", "mesh": parts["body_amboss"], "modifier": True, "settings": SOLID}]},
         {"name": "Schraube (Griff unten)", "pos": (178.0, 128.0), "settings": SCREW_SETTINGS,
          "parts": [{"name": "Schraube", "mesh": parts["screw"]},
                    {"name": "Schaft 100%", "mesh": parts["screw_schaft"], "modifier": True, "settings": SOLID}]},
