@@ -28,7 +28,7 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 | Datei | Inhalt |
 |---|---|
 | `nussknacker_bambu_a1.3mf` | Bambu-Studio-Projekt: beide Teile fertig ausgerichtet, Infill-Modifier eingebaut |
-| `stl/nussknacker_koerper.stl` | Körper, liegt bereits auf dem Rücken (74,9 × 86,3 × 51,1 mm) |
+| `stl/nussknacker_koerper.stl` | Körper, liegt bereits auf dem Rücken (74,9 × 86,3 × 51,3 mm) |
 | `stl/nussknacker_schraube.stl` | Schraube, steht bereits auf dem Griff (88 × 28 × 74,8 mm) |
 | `stl/modifier_*.stl` | Die drei Modifier-Körper einzeln, falls das 3MF nicht passt |
 | `nutcracker.py` | Parametrischer Generator für alles oben |
@@ -54,7 +54,7 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 | Rand (Brim) | nicht nötig |
 | Material | PLA; PETG geht auch |
 
-Verbrauch laut Test-Slice: Körper rund 90 g, Schraube rund 40 g.
+Verbrauch laut Test-Slice: Körper rund 91 g, Schraube rund 40 g.
 
 ### Die Modifier (massive Zonen)
 
@@ -94,13 +94,13 @@ brauchen bis etwa 1000 N. Dafür muss man mit 5 Nm drehen. Ein sehr kräftiger G
 | | **jetzt** | sparsam | zu knapp |
 |---|---|---|---|
 | Wände / Füllung | **5 / 25 %** | 4 / 25 % | 3 / 30 % |
-| Seitenwände | **9,7** | 11,1 | 13,1 |
-| Ambossende | **8,4** | 10,0 | 11,0 |
-| Gewindeblock | **6,6** | 7,4 | 7,6 |
+| Seitenwände | **9,9** | 11,5 | 13,4 |
+| Ambossende | **7,9** | 9,3 | 10,4 |
+| Gewindeblock | **6,8** | 7,4 | 7,5 |
 | Zug zwischen den Lagen | **4,3** | 4,6 | 4,8 |
 | Schub zwischen den Lagen | **3,1** | 3,5 | 3,8 |
-| Füllung, Auslastung | **29 %** | 33 % | 29 % |
-| Gewicht (Test-Slice) | **90 g** | 85 g | 85 g |
+| Füllung, Auslastung | **28 %** | 31 % | 28 % |
+| Gewicht (Test-Slice) | **91 g** | 86 g | 85 g |
 
 Alle drei Varianten haben dieselben massiven Zonen (Hülse und Ambossblock). Größere
 100-%-Blöcke bringen kaum etwas: Sie senken die Spannung in den Seitenwänden nur
@@ -109,7 +109,7 @@ um 2 %.
 Am höchsten belastet sind die Seitenwände am Kammerrand und das Ambossende, nicht
 das Gewinde. Die Last tragen die Wandlinien: Die fünfte Wand kostet knapp 5 g und
 senkt die Spannung an der schwächsten Stelle um 13 %. Mit 4 Wänden hält der Körper
-rechnerisch auch (3,6-fache statt 4,1-fache Sicherheit bei 1000 N), mit 3 Wänden
+rechnerisch auch (3,5-fache statt 4,0-fache Sicherheit bei 1000 N), mit 3 Wänden
 käme er bei 2900 N nah an die Festigkeitsgrenze.
 
 **Schraube.** Der Schaft ist das am knappsten ausgelegte Teil: Bei 10 Nm entstehen
@@ -130,7 +130,8 @@ erfasst das Modell nicht.
   Drittel- bis gut eine halbe Windung aus.
 - Um die Kammeröffnung läuft die Nussschale bis an eine 50° steile Schräge. Eine
   flache Fläche gibt es dort nicht, deshalb zeichnen sich oben keine
-  Treppenstufen ab.
+  Treppenstufen ab. Der Grat zwischen Schräge und Schale ist gerundet, und die
+  Kammerkante liegt zum runden Ende hin am tiefsten.
 - Die Unterseite der Nuss läuft als flacher Kegel (43°) zum Bett – deshalb
   braucht auch die Außenhaut keine Stützen.
 - Gewindespiel: 0,35 mm radial. Läuft die Schraube zu stramm, die Schraube im

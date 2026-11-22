@@ -40,7 +40,9 @@ class Params:
     floor_t: float = 6.0         # Rueckwand unter der Kammer
     rim_z: float = 40.0          # Hoehe der Kammerkante an der tiefsten Stelle
     rim_scoop_r: float = 70.0    # Radius des Bogens, dem die Kammerkante folgt
+    rim_low_y: float = -12.0     # dort liegt die Kammerkante am tiefsten (zum runden Ende hin versetzt)
     rim_slope_deg: float = 50.0  # Neigung der Randschraege (steil = keine sichtbaren Treppenstufen)
+    rim_round: float = 4.0       # Abrundung des Grats zwischen Schraege und Schale (0 = scharf)
 
     # --- Walnuss-Huelle ---------------------------------------------------
     ax: float = 35.0             # halbe Breite
@@ -49,7 +51,7 @@ class Params:
     az_front: float = 28.0       # Halbachse oberhalb der Schraubenachse
     az_back: float = 32.0        # Halbachse unterhalb der Schraubenachse
     exp_y_top: float = 2.4       # >2 macht das Ende stumpfer (Platz fuer das Gewinde)
-    exp_y_bot: float = 2.2
+    exp_y_bot: float = 2.5
     y_top: float = 40.0          # plane Flaeche, an der die Schraube eintritt
     stand_flat_y: float | None = None   # z. B. -40.5 kappt die Spitze zu einer Standflaeche
     # --- massiv gedruckte Zonen (Modifier mit 100 % Fuellung) -------------
@@ -286,7 +288,10 @@ def cavity_guard(p: Params, d: np.ndarray, wall: float) -> np.ndarray:
         mid = 0.5 * (lo + hi)
         x, y, z = mid * d[..., 0], mid * d[..., 1], mid * d[..., 2]
         q = np.abs(x / cx) ** e + np.abs((y - p.y_cav) / cy) ** e
-        above = (q < 1) & (z + p.z_axis < scoop_z(p, y) - 2.0)    # bis knapp unter die Kammerkante
+        # bis knapp unter die Kammerkante; die obersten 4 mm ziehen sich als runde
+        # Schulter ein, damit dort kein Absatz aus der Schale ragt
+        lid = np.clip((z + p.z_axis - (scoop_z(p, y) - 5.0)) / 4.0, 0.0, 1.0)
+        above = q < 1.0 - lid * lid
         below = q + np.abs(z / cz) ** e < 1
         inside = np.where(z >= 0, above, below)
         lo = np.where(inside, mid, lo)
@@ -375,7 +380,7 @@ def cavity_outline(p: Params, n: int = 240, grow: float = 0.0) -> np.ndarray:
 
 def scoop_z(p: Params, y: np.ndarray) -> np.ndarray:
     """Hoehe der Kammerkante ueber dem Bett an der Stelle y (flacher Bogen)."""
-    dy = np.clip(y - p.y_cav, -0.98 * p.rim_scoop_r, 0.98 * p.rim_scoop_r)
+    dy = np.clip(y - p.rim_low_y, -0.98 * p.rim_scoop_r, 0.98 * p.rim_scoop_r)
     return p.rim_z + p.rim_scoop_r - np.sqrt(p.rim_scoop_r ** 2 - dy ** 2)
 
 
@@ -410,6 +415,48 @@ def cavity(p: Params) -> Manifold:
     funnel = ring_stack([r0, r1, r2, r3], np.array([0.0, p.y_cav, p.z_axis]),
                         np.array([0.0, p.y_cav, p.z_axis + 80.0]))
     return bowl + funnel
+
+
+def rim_rounding(p: Params, skin: Manifold) -> Manifold:
+    """Abzugskoerper, der den Grat zwischen Randschraege und Nussschale rundet.
+
+    Schale und Schraege sind nahe am Rand beide Hoehenfelder z(x, y); ihre
+    Oberseite ist das Minimum der beiden.  Ein weiches Minimum mit der Breite
+    rim_round ersetzt den Grat durch eine Rundung -- nur dort, wo sich beide
+    Flaechen naeher als rim_round kommen."""
+    k, step = p.rim_round, 0.3
+    xs = np.arange(-0.5 * p.cav_w - 16.0, 0.5 * p.cav_w + 16.0 + step, step)
+    ys = np.arange(p.y_anvil - 16.0, p.y_boss + 16.0 + step, step)
+    X, Y = np.meshgrid(xs, ys, indexing="ij")
+    # Hoehe der Schale: von oben auf die noch ungeschnittene Nuss treffen
+    z_skin = np.zeros(X.shape)
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            hits = skin.ray_cast((X[i, j], Y[i, j], 70.0), (X[i, j], Y[i, j], 15.0))
+            if hits:
+                z_skin[i, j] = 70.0 - 55.0 * min(h.distance for h in hits)
+    # Hoehe der Schraege (wie in cavity(): radial um g nach aussen gewachsener Umriss)
+    cx, cy, e = 0.5 * p.cav_w, 0.5 * p.cav_len, p.cav_exp
+    psi = np.arctan2(Y - p.y_cav, X)
+    r_out = (np.abs(np.cos(psi) / cx) ** e + np.abs(np.sin(psi) / cy) ** e) ** (-1.0 / e)
+    g = np.hypot(X, Y - p.y_cav) - r_out
+    z_bev = scoop_z(p, p.y_cav + r_out * np.sin(psi)) + np.maximum(g, 0.0) * np.tan(np.radians(p.rim_slope_deg))
+    h = np.clip(1.0 - np.abs(z_skin - z_bev) / k, 0.0, 1.0) * smoothstep(g / 1.0) * (z_skin > 20.0)
+    under = np.where(h > 0, np.minimum(z_skin, z_bev) - 0.25 * k * h * h + 0.02, 90.0)
+
+    # geschlossener Koerper: Unterseite = Hoehenfeld, Deckel bei z = 100
+    nx, ny = X.shape
+    bot = np.c_[X.ravel(), Y.ravel(), under.ravel()]
+    top = np.c_[X.ravel(), Y.ravel(), np.full(X.size, 100.0)]
+    idx = np.arange(nx * ny).reshape(nx, ny)
+    a, b, c, d = idx[:-1, :-1].ravel(), idx[1:, :-1].ravel(), idx[1:, 1:].ravel(), idx[:-1, 1:].ravel()
+    n = nx * ny
+    tris = [np.c_[a, c, b], np.c_[a, d, c],                              # Unterseite (Normale nach unten)
+            np.c_[a + n, b + n, c + n], np.c_[a + n, c + n, d + n]]      # Deckel
+    for edge, flip in ((idx[:, 0], False), (idx[-1, :], False), (idx[:, -1], True), (idx[0, :], True)):
+        e0, e1 = (edge[:-1], edge[1:]) if not flip else (edge[1:], edge[:-1])
+        tris += [np.c_[e0, e1, e1 + n], np.c_[e0, e1 + n, e0 + n]]
+    return to_manifold(np.vstack([bot, top]), np.vstack(tris))
 
 
 # --------------------------------------------------------------------------
@@ -471,7 +518,11 @@ def make_body(p: Params) -> Manifold:
     body = body.trim_by_plane((0.0, -1.0, 0.0), -p.y_top)      # Schraubenseite
     if p.stand_flat_y is not None:                             # sonst bleibt die Spitze der Nuss
         body = body.trim_by_plane((0.0, 1.0, 0.0), p.stand_flat_y)
+    skin = body
     body = body - cavity(p)
+    if p.rim_round > 0:
+        body = body - rim_rounding(p, skin)
+        body = max(body.decompose(), key=lambda m: m.volume())   # Splitter vom Schnitt verwerfen
 
     c = p.clearance
     R = p.r_major + c                                           # Kernloch + Gewindegrund
