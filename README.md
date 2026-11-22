@@ -94,12 +94,12 @@ brauchen bis etwa 1000 N. Dafür muss man mit 5 Nm drehen. Ein sehr kräftiger G
 | | **jetzt** | sparsam | zu knapp |
 |---|---|---|---|
 | Wände / Füllung | **5 / 25 %** | 4 / 25 % | 3 / 30 % |
-| Seitenwände | **9,7** | 11,1 | 13,2 |
-| Ambossende | **8,5** | 10,1 | 11,1 |
-| Gewindeblock | **6,5** | 7,3 | 7,4 |
-| Zug zwischen den Lagen | **3,6** | 3,9 | 4,0 |
+| Seitenwände | **9,7** | 11,1 | 13,1 |
+| Ambossende | **8,4** | 10,0 | 11,0 |
+| Gewindeblock | **6,6** | 7,4 | 7,6 |
+| Zug zwischen den Lagen | **4,3** | 4,6 | 4,8 |
 | Schub zwischen den Lagen | **3,1** | 3,5 | 3,8 |
-| Füllung, Auslastung | **30 %** | 33 % | 29 % |
+| Füllung, Auslastung | **29 %** | 33 % | 29 % |
 | Gewicht (Test-Slice) | **90 g** | 85 g | 85 g |
 
 Alle drei Varianten haben dieselben massiven Zonen (Hülse und Ambossblock). Größere
@@ -108,7 +108,7 @@ um 2 %.
 
 Am höchsten belastet sind die Seitenwände am Kammerrand und das Ambossende, nicht
 das Gewinde. Die Last tragen die Wandlinien: Die fünfte Wand kostet knapp 5 g und
-senkt die Spannung an der schwächsten Stelle um 12 %. Mit 4 Wänden hält der Körper
+senkt die Spannung an der schwächsten Stelle um 13 %. Mit 4 Wänden hält der Körper
 rechnerisch auch (3,6-fache statt 4,1-fache Sicherheit bei 1000 N), mit 3 Wänden
 käme er bei 2900 N nah an die Festigkeitsgrenze.
 
@@ -124,8 +124,10 @@ erfasst das Modell nicht.
 ### Hinweise
 
 - Im liegenden Gewindeloch gibt es oben ein kleines flaches Dach (9 mm Brücke).
-  Das druckt ohne Stützen. Die Gewindegänge sind dort bewusst weggelassen, damit
-  durchhängendes Material das Gewinde nicht klemmen lässt.
+  Das druckt ohne Stützen. Die Gewindegänge laufen zum Dach hin sanft aus, damit
+  dort keine frei hängenden Zahnstummel entstehen und nichts klemmt. Auch an beiden
+  Enden des Lochs und zur Spitze der Schraube hin laufen die Gänge über eine halbe
+  bis ganze Windung aus.
 - Um die Kammeröffnung läuft die Nussschale bis an eine 50° steile Schräge. Eine
   flache Fläche gibt es dort nicht, deshalb zeichnen sich oben keine
   Treppenstufen ab.
@@ -207,7 +209,7 @@ Rechnerisch geprüft:
   Gewindeflanken der Schraube (55°), als Brücke im Gewindeloch und über den
   schmalen Rillen der Gravur
 - Festigkeit gerechnet (siehe oben): bei 1000 N höchstens 10 MPa in den Wänden
-  und 3,6 MPa zwischen den Lagen
+  und 4,3 MPa zwischen den Lagen
 - Test-Slice mit PrusaSlicer: Schraube ohne Stützmaterial, Körper nur im
   Gewindeloch; die Modifier wirken an der vorgesehenen Stelle; die Gravur bleibt in den ersten
   drei Schichten frei und wird darüber überbrückt

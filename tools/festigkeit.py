@@ -127,7 +127,7 @@ print(f"  FE-Netz: {ne} Elemente, {nn} Knoten", flush=True)
 
 # --- Lasten ---------------------------------------------------------------
 R = p.r_major + p.clearance
-thr = (r_ax > p.r_minor - 0.3) & (r_ax < R + 0.9) & (cen[:, 1] > p.y_boss + 1.5) & (cen[:, 1] < p.y_top - 2.6) & (ang_top > 47)
+thr = (r_ax > p.r_minor - 0.3) & (r_ax < R + 0.9) & (cen[:, 1] > p.y_boss + 1.5) & (cen[:, 1] < p.y_top - 3.5) & (ang_top > 64)   # tragende Gaenge
 roof = (r_ax > R - 0.5) & (r_ax < R + 1.6) & (cen[:, 1] > p.y_boss + 1.5) & (cen[:, 1] < p.y_top - 2.6) & (ang_top < 30)
 cup_c = np.array([0.0, p.y_anvil - p.anvil_cup_depth, p.z_axis])
 anv = (np.hypot(cen[:, 0], cen[:, 2] - p.z_axis) < 4.0) & (np.abs(cen[:, 1] - cup_c[1]) < 1.3)

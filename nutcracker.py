@@ -415,21 +415,34 @@ def cavity(p: Params) -> Manifold:
 # --------------------------------------------------------------------------
 # Gewinde
 # --------------------------------------------------------------------------
-def thread_solid(p: Params, length: float, offset: float = 0.0) -> Manifold:
+def smoothstep(x):
+    x = np.clip(x, 0.0, 1.0)
+    return x * x * (3.0 - 2.0 * x)
+
+
+def thread_solid(p: Params, length: float, offset: float = 0.0, weight=None, cutter: bool = False) -> Manifold:
     """Rechtsgewinde entlang +z ab z = 0.  offset > 0 blaest das Profil rundum
-    auf -- so entsteht das Werkzeug fuer das Innengewinde mit Spiel."""
+    auf -- so entsteht das Werkzeug fuer das Innengewinde mit Spiel.
+
+    weight(theta, z) in 0..1 laesst die Gaenge sanft auslaufen.  Bei der
+    Schraube schrumpft der Gang dabei auf den Kern; beim Werkzeug (cutter)
+    weitet sich das Loch auf den Aussenradius, die Zaehne im Koerper werden
+    also flacher."""
     r_root = p.r_minor + offset
     r_crest = p.r_major + offset
     grow = 2.0 * offset * np.tan(np.radians(0.5 * (90.0 - p.flank_deg)))
     crest_w = p.crest_w + grow
     th = np.linspace(0, 2 * np.pi, p.thread_seg, endpoint=False)
-    s = th / (2 * np.pi) * p.pitch
-    s = np.minimum(s, p.pitch - s)                      # Abstand zur Spitzenmitte
-    t = np.clip((s - 0.5 * crest_w) / p.flank_run, 0.0, 1.0)
-    r = r_crest - t * (r_crest - r_root)
-    cs = CrossSection([np.c_[r * np.cos(th), r * np.sin(th)]])
-    div = max(2, int(round(length / p.pitch * p.thread_div)))
-    return cs.extrude(length, div, 360.0 * length / p.pitch)
+    n = max(2, int(round(length / p.pitch * p.thread_div)))
+    rings = []
+    for z in np.linspace(0.0, length, n + 1):
+        s = (th / (2 * np.pi) * p.pitch - z) % p.pitch
+        s = np.minimum(s, p.pitch - s)                  # Abstand zur Spitzenmitte
+        t = np.clip((s - 0.5 * crest_w) / p.flank_run, 0.0, 1.0)     # 0 = Spitze, 1 = Grund
+        w = 1.0 if weight is None else weight(th, z)
+        r = r_crest - (r_crest - r_root) * t * w if cutter else r_root + (r_crest - r_root) * (1.0 - t) * w
+        rings.append(np.c_[r * np.cos(th), r * np.sin(th), np.full(len(th), z)])
+    return ring_stack(rings, np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, length]))
 
 
 def revolve(profile: list[tuple[float, float]], seg: int = 96) -> Manifold:
@@ -464,7 +477,16 @@ def make_body(p: Params) -> Manifold:
     R = p.r_major + c                                           # Kernloch + Gewindegrund
     y0 = p.y_boss - 4.0
     L = p.y_top - y0 + 1.0
-    hole = along_y(thread_solid(p, L, offset=c)).translate((0.0, y0, p.z_axis))
+    # Die Zaehne laufen sanft aus: zum Dach des liegenden Lochs hin (dort waeren
+    # sie frei haengende Stummel) und an beiden Enden des Gewindes.
+    run = 0.5 * p.pitch
+    z_in, z_out = p.y_boss - y0, p.y_top - (p.neck_h + 0.4) - y0
+
+    def fade(th, z):
+        from_roof = np.abs((np.degrees(th) - 270.0 + 180.0) % 360.0 - 180.0)   # Winkel zum Dach
+        return (smoothstep((from_roof - 50.0) / 28.0)
+                * smoothstep((z - z_in) / run) * smoothstep((z_out - z) / run))
+    hole = along_y(thread_solid(p, L, offset=c, weight=fade, cutter=True)).translate((0.0, y0, p.z_axis))
 
     # Einlauf-Senkung an der Schraubenseite (passt zum Kegel unter dem Griff)
     sink = p.neck_h + 0.4
@@ -532,10 +554,10 @@ def make_screw(p: Params) -> Manifold:
     z3 = z2 + L
     pin = 2.0                                   # glatter Zapfen
     r_pin = p.r_minor - 0.3
-    env = revolve([(0, z2 - 0.5), (p.r_major + 1.0, z2 - 0.5),
-                   (p.r_major + 1.0, z3 - pin - (p.r_major + 1.0 - r_pin)),
-                   (r_pin, z3 - pin), (r_pin, z3 - 0.8), (r_pin - 0.8, z3), (0, z3)])
-    thread = thread_solid(p, L + 0.5).translate((0.0, 0.0, z2 - 0.5)) ^ env
+    Lt = L + 0.5 - pin                          # der Gang laeuft zur Spitze hin ueber eine Windung aus
+    thread = thread_solid(p, Lt, weight=lambda th, z: smoothstep((Lt - z) / p.pitch)).translate((0.0, 0.0, z2 - 0.5))
+    thread += revolve([(0, z3 - pin - 1.0), (p.r_minor, z3 - pin - 1.0), (p.r_minor, z3 - pin),
+                       (r_pin, z3 - pin + 0.3), (r_pin, z3 - 0.8), (r_pin - 0.8, z3), (0, z3)])
 
     cup = Manifold.sphere(p.cup_r, 96).translate((0.0, 0.0, z3 + p.cup_r - p.cup_depth))
     return head + neck + thread - cup
