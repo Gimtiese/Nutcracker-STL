@@ -479,12 +479,12 @@ def make_body(p: Params) -> Manifold:
     L = p.y_top - y0 + 1.0
     # Die Zaehne laufen sanft aus: zum Dach des liegenden Lochs hin (dort waeren
     # sie frei haengende Stummel) und an beiden Enden des Gewindes.
-    run = 0.5 * p.pitch
+    run = 0.35 * p.pitch
     z_in, z_out = p.y_boss - y0, p.y_top - (p.neck_h + 0.4) - y0
 
     def fade(th, z):
         from_roof = np.abs((np.degrees(th) - 270.0 + 180.0) % 360.0 - 180.0)   # Winkel zum Dach
-        return (smoothstep((from_roof - 50.0) / 28.0)
+        return (smoothstep((from_roof - 48.0) / 20.0)
                 * smoothstep((z - z_in) / run) * smoothstep((z_out - z) / run))
     hole = along_y(thread_solid(p, L, offset=c, weight=fade, cutter=True)).translate((0.0, y0, p.z_axis))
 
@@ -554,8 +554,8 @@ def make_screw(p: Params) -> Manifold:
     z3 = z2 + L
     pin = 2.0                                   # glatter Zapfen
     r_pin = p.r_minor - 0.3
-    Lt = L + 0.5 - pin                          # der Gang laeuft zur Spitze hin ueber eine Windung aus
-    thread = thread_solid(p, Lt, weight=lambda th, z: smoothstep((Lt - z) / p.pitch)).translate((0.0, 0.0, z2 - 0.5))
+    Lt = L + 0.5 - pin                          # der Gang laeuft zur Spitze hin ueber gut eine halbe Windung aus
+    thread = thread_solid(p, Lt, weight=lambda th, z: smoothstep((Lt - z) / (0.6 * p.pitch))).translate((0.0, 0.0, z2 - 0.5))
     thread += revolve([(0, z3 - pin - 1.0), (p.r_minor, z3 - pin - 1.0), (p.r_minor, z3 - pin),
                        (r_pin, z3 - pin + 0.3), (r_pin, z3 - 0.8), (r_pin - 0.8, z3), (0, z3)])
 

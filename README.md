@@ -126,8 +126,8 @@ erfasst das Modell nicht.
 - Im liegenden Gewindeloch gibt es oben ein kleines flaches Dach (9 mm Brücke).
   Das druckt ohne Stützen. Die Gewindegänge laufen zum Dach hin sanft aus, damit
   dort keine frei hängenden Zahnstummel entstehen und nichts klemmt. Auch an beiden
-  Enden des Lochs und zur Spitze der Schraube hin laufen die Gänge über eine halbe
-  bis ganze Windung aus.
+  Enden des Lochs und zur Spitze der Schraube hin laufen die Gänge über eine
+  Drittel- bis gut eine halbe Windung aus.
 - Um die Kammeröffnung läuft die Nussschale bis an eine 50° steile Schräge. Eine
   flache Fläche gibt es dort nicht, deshalb zeichnen sich oben keine
   Treppenstufen ab.
@@ -202,7 +202,10 @@ Fehlt die Karte, rechnet der Generator ersatzweise ein künstliches Relief.
 Rechnerisch geprüft:
 
 - Netze geschlossen, je ein zusammenhängender Körper
-- Schraube läuft kollisionsfrei über den ganzen Verfahrweg (0,76 mm Axialspiel)
+- Schraube läuft kollisionsfrei über den ganzen Verfahrweg (0,84 mm Axialspiel).
+  Gegenüber dem ersten Probedruck, bei dem das Gewinde gut lief, hat es in jede
+  Richtung gleich viel oder etwas mehr Spiel; die tragende Flankenfläche beträgt
+  rund drei Viertel davon (4,8 MPa Flächenpressung bei 1000 N)
 - Mindestwand um das Gewinde 5,5 mm, um die Nusskammer mindestens 4 mm (auf
   Achshöhe über 10 mm), Rückwand 6 mm
 - Außenhaut ohne Überhang über 45°; steilere Flächen gibt es nur an den
