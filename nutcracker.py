@@ -38,9 +38,9 @@ class Params:
     cav_depth: float = 20.0      # Tiefe unterhalb der Schraubenachse
     cav_exp: float = 2.7         # Superellipsen-Exponent (2 = Ellipse, gross = Kasten)
     floor_t: float = 6.0         # Rueckwand unter der Kammer
-    rim_z: float = 40.0          # Hoehe des Kammerrands an der tiefsten Stelle
-    rim_scoop_r: float = 70.0    # Radius der Mulde, die den Rand formt
-    rim_chamfer: float = 1.6     # Fase am inneren Kammerrand
+    rim_z: float = 40.0          # Hoehe der Kammerkante an der tiefsten Stelle
+    rim_scoop_r: float = 70.0    # Radius des Bogens, dem die Kammerkante folgt
+    rim_slope_deg: float = 50.0  # Neigung der Randschraege (steil = keine sichtbaren Treppenstufen)
 
     # --- Walnuss-Huelle ---------------------------------------------------
     ax: float = 35.0             # halbe Breite
@@ -286,7 +286,7 @@ def cavity_guard(p: Params, d: np.ndarray, wall: float) -> np.ndarray:
         mid = 0.5 * (lo + hi)
         x, y, z = mid * d[..., 0], mid * d[..., 1], mid * d[..., 2]
         q = np.abs(x / cx) ** e + np.abs((y - p.y_cav) / cy) ** e
-        above = (q < 1) & (z + p.z_axis < scoop_z(p, y) + 1.0)    # bis knapp ueber den Rand
+        above = (q < 1) & (z + p.z_axis < scoop_z(p, y) - 2.0)    # bis knapp unter die Kammerkante
         below = q + np.abs(z / cz) ** e < 1
         inside = np.where(z >= 0, above, below)
         lo = np.where(inside, mid, lo)
@@ -374,7 +374,7 @@ def cavity_outline(p: Params, n: int = 240, grow: float = 0.0) -> np.ndarray:
 
 
 def scoop_z(p: Params, y: np.ndarray) -> np.ndarray:
-    """Hoehe der Rand-Mulde ueber dem Bett an der Stelle y."""
+    """Hoehe der Kammerkante ueber dem Bett an der Stelle y (flacher Bogen)."""
     dy = np.clip(y - p.y_cav, -0.98 * p.rim_scoop_r, 0.98 * p.rim_scoop_r)
     return p.rim_z + p.rim_scoop_r - np.sqrt(p.rim_scoop_r ** 2 - dy ** 2)
 
@@ -395,24 +395,21 @@ def cavity(p: Params) -> Manifold:
     bowl = ring_stack(rings, np.array([0.0, p.y_cav, p.z_axis - cz]),
                       np.array([0.0, p.y_cav, p.z_axis + 80.0]))
 
-    # Fase am inneren Rand: Trichter, der der Mulde folgt
-    c = p.rim_chamfer
+    # Randschraege: von der Kammerkante steigt ein steiler Trichter nach aussen
+    # an, bis er die Nussschale trifft.  So gibt es oben keine flache Flaeche,
+    # auf der die Lagen als Treppe sichtbar waeren.
+    g = 18.0
     a = cavity_outline(p, n)
-    b = cavity_outline(p, n, grow=c)
+    b = cavity_outline(p, n, grow=g)
     ya, yb = a[:, 1] + p.y_cav, b[:, 1] + p.y_cav
+    edge = scoop_z(p, ya)
     r0 = np.c_[a[:, 0], ya, np.full(n, p.z_axis)]
-    r1 = np.c_[a[:, 0], ya, scoop_z(p, ya) - c]
-    r2 = np.c_[b[:, 0], yb, scoop_z(p, yb) + 0.02]
+    r1 = np.c_[a[:, 0], ya, edge]
+    r2 = np.c_[b[:, 0], yb, edge + g * np.tan(np.radians(p.rim_slope_deg))]
     r3 = np.c_[b[:, 0], yb, np.full(n, p.z_axis + 80.0)]
     funnel = ring_stack([r0, r1, r2, r3], np.array([0.0, p.y_cav, p.z_axis]),
                         np.array([0.0, p.y_cav, p.z_axis + 80.0]))
     return bowl + funnel
-
-
-def scoop(p: Params) -> Manifold:
-    """Zylinder quer zur Schraube, der den Kammerrand als Sattel formt."""
-    cyl = Manifold.cylinder(200.0, p.rim_scoop_r, p.rim_scoop_r, 360, True)
-    return cyl.rotate((0.0, 90.0, 0.0)).translate((0.0, p.y_cav, p.rim_z + p.rim_scoop_r))
 
 
 # --------------------------------------------------------------------------
@@ -461,7 +458,7 @@ def make_body(p: Params) -> Manifold:
     body = body.trim_by_plane((0.0, -1.0, 0.0), -p.y_top)      # Schraubenseite
     if p.stand_flat_y is not None:                             # sonst bleibt die Spitze der Nuss
         body = body.trim_by_plane((0.0, 1.0, 0.0), p.stand_flat_y)
-    body = body - scoop(p) - cavity(p)
+    body = body - cavity(p)
 
     c = p.clearance
     R = p.r_major + c                                           # Kernloch + Gewindegrund

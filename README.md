@@ -28,7 +28,7 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 | Datei | Inhalt |
 |---|---|
 | `nussknacker_bambu_a1.3mf` | Bambu-Studio-Projekt: beide Teile fertig ausgerichtet, Infill-Modifier eingebaut |
-| `stl/nussknacker_koerper.stl` | Körper, liegt bereits auf dem Rücken (74,9 × 86,3 × 49,0 mm) |
+| `stl/nussknacker_koerper.stl` | Körper, liegt bereits auf dem Rücken (74,9 × 86,3 × 51,1 mm) |
 | `stl/nussknacker_schraube.stl` | Schraube, steht bereits auf dem Griff (88 × 28 × 74,8 mm) |
 | `stl/modifier_*.stl` | Die drei Modifier-Körper einzeln, falls das 3MF nicht passt |
 | `nutcracker.py` | Parametrischer Generator für alles oben |
@@ -54,7 +54,7 @@ das presst die Lagen zusammen; der Griff wird in der Lagenebene gebogen.
 | Rand (Brim) | nicht nötig |
 | Material | PLA; PETG geht auch |
 
-Verbrauch laut Test-Slice: Körper rund 88 g, Schraube rund 40 g.
+Verbrauch laut Test-Slice: Körper rund 90 g, Schraube rund 40 g.
 
 ### Die Modifier (massive Zonen)
 
@@ -91,23 +91,26 @@ brauchen bis etwa 1000 N. Dafür muss man mit 5 Nm drehen. Ein sehr kräftiger G
 **Körper bei 1000 N** (99,5-%-Werte in MPa; Festigkeit in der Lagenebene rund
 40 MPa, zwischen den Lagen rund 20 MPa):
 
-| | vorher | **jetzt** | sparsam | zu knapp |
-|---|---|---|---|---|
-| Wände / Füllung | 5 / 25 % | **5 / 25 %** | 4 / 25 % | 3 / 30 % |
-| massive Zonen | große Blöcke | **Hülse + Block** | Hülse + Block | Hülse + Block |
-| Seitenwände | 10,8 | **11,0** | 12,5 | 14,7 |
-| Ambossende | 8,3 | **8,8** | 10,2 | 11,0 |
-| Gewindeblock | 7,3 | **8,9** | 9,2 | 8,4 |
-| Zug zwischen den Lagen | 2,9 | **3,4** | 3,6 | 3,7 |
-| Schub zwischen den Lagen | 2,9 | **3,2** | 3,6 | 3,8 |
-| Füllung, Auslastung | 29 % | **32 %** | 36 % | 31 % |
-| Gewicht (Test-Slice) | 96 g | **88 g** | 83 g | 83 g |
+| | **jetzt** | sparsam | zu knapp |
+|---|---|---|---|
+| Wände / Füllung | **5 / 25 %** | 4 / 25 % | 3 / 30 % |
+| Seitenwände | **9,7** | 11,1 | 13,2 |
+| Ambossende | **8,5** | 10,1 | 11,1 |
+| Gewindeblock | **6,5** | 7,3 | 7,4 |
+| Zug zwischen den Lagen | **3,6** | 3,9 | 4,0 |
+| Schub zwischen den Lagen | **3,1** | 3,5 | 3,8 |
+| Füllung, Auslastung | **30 %** | 33 % | 29 % |
+| Gewicht (Test-Slice) | **90 g** | 85 g | 85 g |
+
+Alle drei Varianten haben dieselben massiven Zonen (Hülse und Ambossblock). Größere
+100-%-Blöcke bringen kaum etwas: Sie senken die Spannung in den Seitenwänden nur
+um 2 %.
 
 Am höchsten belastet sind die Seitenwände am Kammerrand und das Ambossende, nicht
-das Gewinde. Die Last tragen die Wandlinien: Die fünfte Wand kostet 4,5 g und
+das Gewinde. Die Last tragen die Wandlinien: Die fünfte Wand kostet knapp 5 g und
 senkt die Spannung an der schwächsten Stelle um 12 %. Mit 4 Wänden hält der Körper
-rechnerisch auch (3,2-fache statt 3,6-fache Sicherheit bei 1000 N), mit 3 Wänden
-käme er bei 2900 N an die Festigkeitsgrenze.
+rechnerisch auch (3,6-fache statt 4,1-fache Sicherheit bei 1000 N), mit 3 Wänden
+käme er bei 2900 N nah an die Festigkeitsgrenze.
 
 **Schraube.** Der Schaft ist das am knappsten ausgelegte Teil: Bei 10 Nm entstehen
 massiv 9 MPa Schub zwischen den Lagen, mit 4 Wänden und 25 % Füllung wären es
@@ -123,6 +126,9 @@ erfasst das Modell nicht.
 - Im liegenden Gewindeloch gibt es oben ein kleines flaches Dach (9 mm Brücke).
   Das druckt ohne Stützen. Die Gewindegänge sind dort bewusst weggelassen, damit
   durchhängendes Material das Gewinde nicht klemmen lässt.
+- Um die Kammeröffnung läuft die Nussschale bis an eine 50° steile Schräge. Eine
+  flache Fläche gibt es dort nicht, deshalb zeichnen sich oben keine
+  Treppenstufen ab.
 - Die Unterseite der Nuss läuft als flacher Kegel (43°) zum Bett – deshalb
   braucht auch die Außenhaut keine Stützen.
 - Gewindespiel: 0,35 mm radial. Läuft die Schraube zu stramm, die Schraube im
@@ -195,13 +201,13 @@ Rechnerisch geprüft:
 
 - Netze geschlossen, je ein zusammenhängender Körper
 - Schraube läuft kollisionsfrei über den ganzen Verfahrweg (0,76 mm Axialspiel)
-- Mindestwand um das Gewinde 5,5 mm, um die Nusskammer mindestens 4 mm (am Rand
-  5 mm, auf Achshöhe über 10 mm), Rückwand 6 mm
+- Mindestwand um das Gewinde 5,5 mm, um die Nusskammer mindestens 4 mm (auf
+  Achshöhe über 10 mm), Rückwand 6 mm
 - Außenhaut ohne Überhang über 45°; steilere Flächen gibt es nur an den
   Gewindeflanken der Schraube (55°), als Brücke im Gewindeloch und über den
   schmalen Rillen der Gravur
-- Festigkeit gerechnet (siehe oben): bei 1000 N höchstens 11 MPa in den Wänden
-  und 3,4 MPa zwischen den Lagen
+- Festigkeit gerechnet (siehe oben): bei 1000 N höchstens 10 MPa in den Wänden
+  und 3,6 MPa zwischen den Lagen
 - Test-Slice mit PrusaSlicer: Schraube ohne Stützmaterial, Körper nur im
   Gewindeloch; die Modifier wirken an der vorgesehenen Stelle; die Gravur bleibt in den ersten
   drei Schichten frei und wird darüber überbrückt
