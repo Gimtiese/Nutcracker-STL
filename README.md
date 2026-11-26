@@ -142,29 +142,29 @@ erfasst das Modell nicht.
 
 ![Gravur](docs/gravur.png)
 
-Auf der flachen Rückseite – der Seite, die auf dem Druckbett liegt – sind ein Bär,
-ein Tannenbaum und ein Schriftzug 0,6 mm tief graviert. Im Bild sind die Rillen
+Auf der flachen Rückseite – der Seite, die auf dem Druckbett liegt – sind die
+Jahreszahl 2026 und daneben zwei Tannenbäume in zwei Größen 0,6 mm tief graviert. Im Bild sind die Rillen
 dunkel hervorgehoben; im Druck haben sie die Farbe des Körpers. Gelesen wird von
 außen, die Schraube zeigt dabei nach rechts.
 
-Bär und Baum sind als Kontur graviert, nicht als Fläche. So ist jede Rille
-höchstens 1,3 mm breit, und die vierte Schicht überbrückt sie sauber. Eine
+Die Bäume sind als Kontur graviert, nicht als Fläche. So ist jede Rille
+höchstens 1,3 mm breit (die Ziffern rund 2 mm), und die vierte Schicht überbrückt sie sauber. Eine
 flächige Vertiefung müsste dicht über dem heißen Bett weit überbrückt werden und
 würde unsauber.
 
 Für eine saubere Gravur das Bett vorher reinigen und die erste Schicht nicht zu
 schnell drucken.
 
-Das Motiv liegt in `gravur.json`. Mit anderem Text oder anderer Vorlage neu erzeugen:
+Das Motiv liegt in `gravur.json`. Mit einer anderen Jahreszahl neu erzeugen:
 
 ```bash
 pip install pillow contourpy
-python3 tools/make_gravur.py vorlage.jpg "Vorname & Vorname" /pfad/zur/Schrift.otf gravur.json
+python3 tools/make_gravur.py "2027" /pfad/zur/Schrift.otf gravur.json
 python3 nutcracker.py
 ```
 
-Die Vorlage ist ein Bild mit einer hellen, orangefarbenen Figur auf dunklem Grund;
-als Schrift ist Dosis ExtraBold verwendet. Ohne Gravur drucken: in `nutcracker.py`
+Als Schrift ist Dosis ExtraBold verwendet (der Punkt in ihrer Null wird
+weggelassen). Ohne Gravur drucken: in `nutcracker.py`
 den Wert `engraving` auf `""` setzen.
 
 ## Benutzung

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """Erzeugt gravur.json: die Gravur auf der flachen Rueckseite (Druckbett-Seite).
 
-Motiv: ein Baer (aus einer Bilddatei nachgezeichnet), ein Tannenbaum
-und ein Schriftzug.  Baer und Baum werden als Kontur graviert, die Schrift als
-gefuellte Buchstaben -- alle Rillen bleiben damit schmal genug, dass die erste
-Schicht darueber sauber druckt.
+Motiv: eine Jahreszahl links, rechts daneben zwei Tannenbaeume in zwei Groessen.
+Die Baeume werden als Kontur graviert, die Zahl als gefuellte Ziffern -- alle
+Rillen bleiben damit schmal genug, dass die erste Schicht darueber sauber druckt.
 
 Leserichtung: von aussen auf die Rueckseite gesehen, Schraube zeigt nach rechts.
 
 Aufruf:
-    python3 tools/make_gravur.py baer.jpg "Stine & Tim" /pfad/zur/Schrift.otf gravur.json
+    python3 tools/make_gravur.py "2026" /pfad/zur/Schrift.otf gravur.json
 """
 import json
 import sys
@@ -26,7 +25,7 @@ import nutcracker as nc  # noqa: E402
 LINE = 1.3          # Rillenbreite der Konturen (mm)
 STROKE_MIN = 1.15   # kleinste Strichstaerke der Schrift (mm)
 MARGIN = 2.6        # Abstand der Gravur zum Rand der Auflageflaeche (mm)
-SCALE_MAX = 0.98    # groesster Massstab des Motivs (1 = Baer 36 mm breit); kleiner, falls es nicht passt
+SCALE_MAX = 1.20    # groesster Massstab des Motivs (1 = grosse Tanne 25 mm hoch); kleiner, falls es nicht passt
 SEG = 48
 
 
@@ -40,16 +39,6 @@ def trace(mask: np.ndarray, px_per_mm: float) -> list[np.ndarray]:
             continue
         out.append(np.c_[ln[:-1, 0], h - ln[:-1, 1]] / px_per_mm)
     return out
-
-
-def bear_shape(path: str, width: float) -> CrossSection:
-    img = np.asarray(Image.open(path).convert("RGB")).astype(float)
-    mask = Image.fromarray(((img[..., 0] - img[..., 2]) > 60).astype(np.uint8) * 255)
-    mask = np.asarray(mask.filter(ImageFilter.GaussianBlur(1.5))).astype(float) / 255.0
-    loops = trace(np.pad(mask, 4), 1.0)
-    loop = max(loops, key=len)                               # der Baer ist die groesste Kontur
-    loop = (loop - loop.min(0)) * (width / np.ptp(loop[:, 0]))
-    return CrossSection([loop], FillRule.EvenOdd).simplify(0.02)
 
 
 def text_shape(text: str, font_path: str, cap: float) -> CrossSection:
@@ -74,7 +63,10 @@ def text_shape(text: str, font_path: str, cap: float) -> CrossSection:
 def tree_shape(h: float, width: float) -> CrossSection:
     """Tanne (Umriss) der Hoehe h; Ursprung unten Mitte des Stamms."""
     trunk = 0.13
-    right = [(0.0, 1.0), (0.44, 0.63), (0.21, 0.63), (0.70, 0.36), (0.38, 0.36),
+    # Einschnuerungen zwischen den Etagen mindestens so breit, dass innen noch
+    # Platz neben der Rille bleibt (sonst laeuft die Kontur bei kleinen Baeumen zu)
+    neck = max(0.28, (LINE + 0.7) / (0.5 * width))
+    right = [(0.0, 1.0), (neck + 0.24, 0.64), (neck, 0.64), (0.76, 0.37), (neck + 0.14, 0.37),
              (1.0, trunk), (0.17, trunk), (0.17, 0.0)]
     poly = np.array([(x * width / 2, y * h) for x, y in right] +
                     [(-x * width / 2, y * h) for x, y in right[:0:-1]])
@@ -87,26 +79,24 @@ def outline(shape: CrossSection, w: float = LINE) -> CrossSection:
     return shape - shape.offset(-w, JoinType.Round, 2.0, SEG)
 
 
-def compose(bear_img: str, text: str, font: str, s: float) -> tuple[CrossSection, CrossSection]:
+def compose(text: str, font: str, s: float) -> tuple[CrossSection, CrossSection]:
     """Motiv in Betrachter-Koordinaten (a nach rechts, b nach oben) im Massstab s.
+    Alle drei Teile stehen auf einer gemeinsamen Grundlinie (b = 0).
     Gibt (Gravurflaeche, Huellflaeche fuer die Platzpruefung) zurueck."""
-    bear = bear_shape(bear_img, 36.0 * s)
-    tree = tree_shape(20.9 * s, 16.0 * s)
-    txt = text_shape(text, font, 6.2 * s)
-    ground = 0.0
-    bb = bear.bounds()
-    tree_x = bb[2] + 2.4 * s + 8.0 * s
-    tb = txt.bounds()
-    txt = txt.translate((0.5 * (bb[0] + tree_x + 8.0 * s) - 0.5 * (tb[2] - tb[0]) + 1.0 * s,
-                         ground - 3.2 * s - (tb[3] - tb[1])))
-    move = (tree_x, ground)
-    art = outline(bear) + outline(tree.translate(move)) + txt
-    hull = bear + tree.translate(move) + txt
+    year = text_shape(text, font, 9.0 * s)
+    big = tree_shape(25.0 * s, 18.0 * s)
+    small = tree_shape(18.5 * s, 14.0 * s)
+    yb = year.bounds()
+    x_big = yb[2] + 4.0 * s + 9.0 * s                    # Mitte der grossen Tanne
+    x_small = x_big + 9.0 * s + 1.8 * s + 7.0 * s        # Mitte der kleinen Tanne
+    big, small = big.translate((x_big, 0.0)), small.translate((x_small, 0.0))
+    art = year + outline(big) + outline(small)
+    hull = year + big + small
     return art, hull
 
 
 def main() -> None:
-    bear_img, text, font, dst = sys.argv[1:5]
+    text, font, dst = sys.argv[1:4]
     p = nc.Params(engraving="")
     foot = nc.make_body(p).slice(0.02)                         # Auflageflaeche in Koerper-xy
     # Betrachter: a = Koerper-y (nach rechts), b = Koerper-x (nach oben)
@@ -115,7 +105,7 @@ def main() -> None:
 
     best = None
     for s in np.arange(SCALE_MAX, 0.6, -0.02):
-        art, hull = compose(bear_img, text, font, s)
+        art, hull = compose(text, font, s)
         hb = hull.bounds()
         ab = area.bounds()
         for da in np.arange(ab[0] - hb[0], ab[2] - hb[2] + 1e-9, 0.5):
@@ -126,14 +116,17 @@ def main() -> None:
                             + (db + 0.5 * (hb[1] + hb[3]) - 0.5 * (ab[1] + ab[3])) ** 2)
                     if best is None or cand < best[0]:
                         best = (cand, s, da, db)
-        if best is not None:
+        if best is not None and best[0] < 2.0 ** 2:     # erst nehmen, wenn es fast mittig sitzt
             break
+        best = None
     if best is None:
         raise SystemExit("Motiv passt nicht auf die Auflageflaeche")
     _, s, da, db = best
-    art, hull = compose(bear_img, text, font, s)
+    art, hull = compose(text, font, s)
     art = art.translate((da, db)).simplify(0.01)
-    # winzige Inseln (z. B. im "&") wuerden als loser Punkt gedruckt: mit ausraeumen
+    # winzige Inseln wuerden als loser Punkt gedruckt: mit ausraeumen; winzige
+    # Gravurpunkte (z. B. der Punkt in der Null mancher Schriften) weglassen
+    art = CrossSection.compose([c for c in art.decompose() if c.area() > 2.0])
     b = art.bounds()
     frame = CrossSection.square((b[2] - b[0] + 6, b[3] - b[1] + 6)).translate((b[0] - 3, b[1] - 3))
     for piece in (frame - art).decompose():
