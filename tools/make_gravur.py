@@ -83,15 +83,19 @@ def outline(shape: CrossSection, w: float = LINE) -> CrossSection:
 def compose(text: str, font: str, s: float) -> tuple[CrossSection, CrossSection]:
     """Motiv in Betrachter-Koordinaten (a nach rechts, b nach oben) im Massstab s.
     Links zwei Tannen hintereinander: die kleine steht etwas hoeher und halb
-    verdeckt hinter der grossen.  Rechts die Jahreszahl auf der Grundlinie der
-    vorderen Tanne.  Gibt (Gravurflaeche, Huellflaeche fuer die Platzpruefung) zurueck."""
+    verdeckt hinter der grossen.  Rechts die Jahreszahl, senkrecht mittig zu
+    den Baeumen.  Gibt (Gravurflaeche, Huellflaeche fuer die Platzpruefung) zurueck."""
     front = tree_shape(25.0 * s, 18.0 * s)                       # Mitte bei a = 0
     back = tree_shape(19.0 * s, 14.0 * s).translate((-9.0 * s, 3.5 * s))
     # verdeckter Teil faellt weg; ein schmaler Spalt vor der vorderen Kontur haelt
     # die Linien getrennt (sonst entstehen an den Kreuzungen Kleckse)
     back_line = outline(back) - front.offset(0.9, JoinType.Round, 2.0, SEG)
     year = text_shape(text, font, 9.0 * s)
-    year = year.translate((9.0 * s + 4.5 * s, 0.0))
+    # Jahreszahl senkrecht mittig zu den Baeumen (leicht unter der geometrischen
+    # Mitte, weil die Tannen unten breiter und damit optisch schwerer sind)
+    tb, yb = (back + front).bounds(), year.bounds()
+    mid = tb[1] + 0.46 * (tb[3] - tb[1])
+    year = year.translate((9.0 * s + 4.5 * s, mid - 0.5 * (yb[1] + yb[3])))
     art = back_line + outline(front) + year
     hull = back + front + year
     return art, hull

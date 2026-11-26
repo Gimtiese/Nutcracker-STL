@@ -144,7 +144,7 @@ erfasst das Modell nicht.
 
 Auf der flachen Rückseite – der Seite, die auf dem Druckbett liegt – sind links
 zwei Tannenbäume in zwei Größen – die kleine steht versetzt hinter der großen –
-und rechts daneben die Jahreszahl 2026, 0,6 mm tief graviert. Im Bild sind die Rillen
+und rechts daneben, mittig dazu, die Jahreszahl 2026, 0,6 mm tief graviert. Im Bild sind die Rillen
 dunkel hervorgehoben; im Druck haben sie die Farbe des Körpers. Gelesen wird von
 außen, die Schraube zeigt dabei nach rechts.
 
