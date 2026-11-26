@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Erzeugt gravur.json: die Gravur auf der flachen Rueckseite (Druckbett-Seite).
 
-Motiv: eine Jahreszahl links, rechts daneben zwei Tannenbaeume in zwei Groessen.
+Motiv: links zwei Tannenbaeume in zwei Groessen, hintereinander versetzt,
+rechts daneben eine Jahreszahl.
 Die Baeume werden als Kontur graviert, die Zahl als gefuellte Ziffern -- alle
 Rillen bleiben damit schmal genug, dass die erste Schicht darueber sauber druckt.
 
@@ -81,17 +82,18 @@ def outline(shape: CrossSection, w: float = LINE) -> CrossSection:
 
 def compose(text: str, font: str, s: float) -> tuple[CrossSection, CrossSection]:
     """Motiv in Betrachter-Koordinaten (a nach rechts, b nach oben) im Massstab s.
-    Alle drei Teile stehen auf einer gemeinsamen Grundlinie (b = 0).
-    Gibt (Gravurflaeche, Huellflaeche fuer die Platzpruefung) zurueck."""
+    Links zwei Tannen hintereinander: die kleine steht etwas hoeher und halb
+    verdeckt hinter der grossen.  Rechts die Jahreszahl auf der Grundlinie der
+    vorderen Tanne.  Gibt (Gravurflaeche, Huellflaeche fuer die Platzpruefung) zurueck."""
+    front = tree_shape(25.0 * s, 18.0 * s)                       # Mitte bei a = 0
+    back = tree_shape(19.0 * s, 14.0 * s).translate((-9.0 * s, 3.5 * s))
+    # verdeckter Teil faellt weg; ein schmaler Spalt vor der vorderen Kontur haelt
+    # die Linien getrennt (sonst entstehen an den Kreuzungen Kleckse)
+    back_line = outline(back) - front.offset(0.9, JoinType.Round, 2.0, SEG)
     year = text_shape(text, font, 9.0 * s)
-    big = tree_shape(25.0 * s, 18.0 * s)
-    small = tree_shape(18.5 * s, 14.0 * s)
-    yb = year.bounds()
-    x_big = yb[2] + 4.0 * s + 9.0 * s                    # Mitte der grossen Tanne
-    x_small = x_big + 9.0 * s + 1.8 * s + 7.0 * s        # Mitte der kleinen Tanne
-    big, small = big.translate((x_big, 0.0)), small.translate((x_small, 0.0))
-    art = year + outline(big) + outline(small)
-    hull = year + big + small
+    year = year.translate((9.0 * s + 4.5 * s, 0.0))
+    art = back_line + outline(front) + year
+    hull = back + front + year
     return art, hull
 
 
